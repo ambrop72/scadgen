@@ -79,6 +79,10 @@ class Vec3(object):
             self[2] * other[0] - self[0] * other[2],
             self[0] * other[1] - self[1] * other[0]
         )
+    
+    def transform(self, matrix):
+        assert isinstance(matrix, Mat4)
+        return matrix * self
 
 Vec3.ZERO = Vec3(0.0,0.0,0.0)
 Vec3.X = Vec3(1.0,0.0,0.0)

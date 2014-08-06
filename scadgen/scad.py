@@ -14,12 +14,55 @@ class ComposedObject(Object):
         
         self._children = [child for child in children]
     
+    def child(self, index=0, context=None):
+        index = _int_arg(index)
+        assert 0 <= index < len(self._children), "Invalid child index."
+        
+        return ChildProxy(self, index, context)
+    
+    def get_child_transform(self, index):
+        index = _int_arg(index)
+        assert 0 <= index < len(self._children), "Invalid child index."
+        
+        if hasattr(self, 'get_child_transform_impl'):
+            return self.get_child_transform_impl(index)
+        else:
+            return Mat4.ID
+    
     def _openscad_child_ops(self):
         return [child._openscad_operation() for child in self._children]
     
     def _openjscad_child_ops(self):
         return [child._openjscad_operation() for child in self._children]
 
+class ChildProxy(object):
+    def __init__(self, parent, index, context):
+        self._parent = parent
+        self._index = index
+        self._context = context
+    
+    def obj(self):
+        return self._parent._children[self._index]
+    
+    def child(self, index=0):
+        return self.obj().child(index, self)
+    
+    def get_transform(self):
+        matrix = self._parent.get_child_transform(self._index)
+        if self._context is not None:
+            matrix = self._context.get_transform() * matrix
+        return matrix
+    
+    def __getattr__(self, name):
+        att = getattr(self.obj(), name)
+        if not callable(att):
+            return att
+        def func(*args, **kwargs):
+            res = att(*args, **kwargs)
+            if hasattr(res, 'transform'):
+                res = res.transform(self.get_transform())
+            return res
+        return func
 
 class Cube(PrimitiveObject):
     def __init__(self, size, center_x=False, center_y=False, center_z=False, center=False):
@@ -35,12 +78,64 @@ class Cube(PrimitiveObject):
             center_z = True
         
         self._size = size
+        self._centered = (center_x, center_y, center_z)
         self._offset = Vec3(
             -size.x/2 if center_x else 0.0,
             -size.y/2 if center_y else 0.0,
             -size.z/2 if center_z else 0.0
         )
         self._has_offset = (center_x or center_y or center_z)
+    
+    def left_center(self):
+        return Vec3(self._dim_min(0), self._dim_center(1), self._dim_center(2))
+    
+    def right_center(self):
+        return Vec3(self._dim_max(0), self._dim_center(1), self._dim_center(2))
+    
+    def front_center(self):
+        return Vec3(self._dim_center(0), self._dim_min(1), self._dim_center(2))
+    
+    def back_center(self):
+        return Vec3(self._dim_center(0), self._dim_max(1), self._dim_center(2))
+    
+    def bottom_center(self):
+        return Vec3(self._dim_center(0), self._dim_center(1), self._dim_min(2))
+    
+    def top_center(self):
+        return Vec3(self._dim_center(0), self._dim_center(1), self._dim_max(2))
+    
+    def left_front_bottom(self):
+        return Vec3(self._dim_min(0), self._dim_min(1), self._dim_min(2))
+    
+    def right_front_bottom(self):
+        return Vec3(self._dim_max(0), self._dim_min(1), self._dim_min(2))
+    
+    def left_back_bottom(self):
+        return Vec3(self._dim_min(0), self._dim_max(1), self._dim_min(2))
+    
+    def right_back_bottom(self):
+        return Vec3(self._dim_max(0), self._dim_max(1), self._dim_min(2))
+    
+    def left_front_top(self):
+        return Vec3(self._dim_min(0), self._dim_min(1), self._dim_max(2))
+    
+    def right_front_top(self):
+        return Vec3(self._dim_max(0), self._dim_min(1), self._dim_max(2))
+    
+    def left_back_top(self):
+        return Vec3(self._dim_min(0), self._dim_max(1), self._dim_max(2))
+    
+    def right_back_top(self):
+        return Vec3(self._dim_max(0), self._dim_max(1), self._dim_max(2))
+    
+    def _dim_min(self, dim):
+        return -self._size[dim]/2 if self._centered[dim] else 0.0
+    
+    def _dim_center(self, dim):
+        return 0.0 if self._centered[dim] else self._size[dim]/2
+    
+    def _dim_max(self, dim):
+        return self._size[dim]/2 if self._centered[dim] else self._size[dim]
     
     def _openscad_operation(self):
         op = OpenscadOperation('cube', [self._size], {})
@@ -73,6 +168,12 @@ class Cylinder(PrimitiveObject):
         self._r1 = r1
         self._r2 = r2
         self._fn = fn
+    
+    def bottom_center(self):
+        return Vec3(0.0, 0.0, 0.0)
+    
+    def top_center(self):
+        return Vec3(0.0, 0.0, self._h)
     
     def _openscad_operation(self):
         return OpenscadOperation('cylinder', [], {'h':self._h, 'r1':self._r1, 'r2':self._r2, '$fn':self._fn})
@@ -128,6 +229,9 @@ class Minkowski(ComposedObject):
     def __init__(self, children):
         ComposedObject.__init__(self, children)
     
+    def get_child_transform_impl(self, index):
+        raise ValueError('Transform matrix for Minkowski not defined yet.')
+    
     def _openscad_operation(self):
         return OpenscadOperation('minkowski', [], {}, self._openscad_child_ops())
     
@@ -137,6 +241,9 @@ class Minkowski(ComposedObject):
 class Hull(ComposedObject):
     def __init__(self, children):
         ComposedObject.__init__(self, children)
+    
+    def get_child_transform_impl(self, index):
+        raise ValueError('Transform matrix for Hull not defined yet.')
     
     def _openscad_operation(self):
         return OpenscadOperation('hull', [], {}, self._openscad_child_ops())
@@ -151,7 +258,10 @@ class Translate(ComposedObject):
         offset = _vec3_arg(offset)
         
         self._offset = offset
-        
+    
+    def get_child_transform_impl(self, index):
+        return Mat4.new_translate(self._offset)
+    
     def _openscad_operation(self):
         return OpenscadOperation('translate', [self._offset], {}, self._openscad_child_ops())
     
@@ -165,7 +275,10 @@ class Mirror(ComposedObject):
         plane = _vec3_arg(plane)
         
         self._plane = plane
-        
+    
+    def get_child_transform_impl(self, index):
+        return Mat4.new_householder(self._plane)
+    
     def _openscad_operation(self):
         return OpenscadOperation('mirror', [self._plane], {}, self._openscad_child_ops())
     
@@ -180,6 +293,9 @@ class Transform(ComposedObject):
         matrix = _mat4_arg(matrix)
         
         self._matrix = matrix
+    
+    def get_child_transform_impl(self, index):
+        return self._matrix
     
     def _openscad_operation(self):
         return OpenscadOperation('multmatrix', [self._matrix], {}, self._openscad_child_ops())
