@@ -20,6 +20,7 @@ def model():
         ])
     ])
     
+    # Coordinates obtained from child objects are automagically transformed.
     return Union([
         obj,
         Translate(obj.child(1).child().bottom_center(), [Sphere(r=0.3)]),
