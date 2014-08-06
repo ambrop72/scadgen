@@ -10,9 +10,9 @@ class PrimitiveObject(Object):
 
 class ComposedObject(Object):
     def __init__(self, children):
-        assert all(isinstance(child, Object) for child in children), "A child of a composed object is not an object."
         
         self._children = [child for child in children]
+        assert all(isinstance(child, Object) for child in self._children), "A child of a composed object is not an object."
     
     def child(self, index=0, context=None):
         index = _int_arg(index)
