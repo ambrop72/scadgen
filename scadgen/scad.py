@@ -86,6 +86,9 @@ class Cube(PrimitiveObject):
         )
         self._has_offset = (center_x or center_y or center_z)
     
+    def center(self):
+        return Vec3(self._dim_center(0), self._dim_center(1), self._dim_center(2))
+    
     def left_center(self):
         return Vec3(self._dim_min(0), self._dim_center(1), self._dim_center(2))
     
@@ -169,6 +172,9 @@ class Cylinder(PrimitiveObject):
         self._r2 = r2
         self._fn = fn
     
+    def center(self):
+        return Vec3(0.0, 0.0, self._h/2)
+    
     def bottom_center(self):
         return Vec3(0.0, 0.0, 0.0)
     
@@ -188,6 +194,9 @@ class Sphere(PrimitiveObject):
         
         self._r = r
         self._fn = fn
+    
+    def center(self):
+        return Vec3(0.0, 0.0, 0.0)
     
     def _openscad_operation(self):
         return OpenscadOperation('sphere', [], {'r':self._r, '$fn':self._fn})

@@ -26,6 +26,7 @@ def model():
         Translate(obj.child(1).child().right_center(), [Sphere(r=0.5)]),
         Translate(obj.child(1).child().left_front_bottom(), [Sphere(r=0.5)]),
         Translate(obj.child(0).child(0).child().top_center(), [Sphere(r=0.5)]),
-        Translate(obj.child(0).child(1).child().top_center(), [Sphere(r=0.5)])
+        Translate(obj.child(0).child(1).child().top_center(), [Sphere(r=0.5)]),
+        Translate(obj.child(0).child(0).child().center(), [Sphere(r=5)])
     ])
 
