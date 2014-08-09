@@ -148,7 +148,7 @@ class Mat4(object):
         return Mat4.new_fromfunc(func)
     
     @staticmethod
-    def new_base(x_unit_vec, y_unit_vec, z_unit_vec, origin_vec):
+    def new_base(x_unit_vec, y_unit_vec, z_unit_vec, origin_vec=Vec3.ZERO):
         assert isinstance(x_unit_vec, Vec3)
         assert isinstance(y_unit_vec, Vec3)
         assert isinstance(z_unit_vec, Vec3)
@@ -167,6 +167,25 @@ class Mat4(object):
             [1.0-2.0*a*a, -2.0*a*b, -2.0*a*c, 0.0],
             [-2.0*a*b, 1.0-2.0*b*b, -2.0*b*c, 0.0],
             [-2.0*a*c, -2.0*b*c, 1.0-2.0*c*c, 0.0],
+            [0.0, 0.0, 0.0, 1.0]
+        ])
+    
+    @staticmethod
+    def new_rotate(angle_deg, vector):
+        assert type(angle_deg) is float
+        assert isinstance(vector, Vec3)
+        normalized_vector = vector.normalize()
+        x = normalized_vector.x
+        y = normalized_vector.y
+        z = normalized_vector.z
+        angle = angle_deg * (math.pi / 180)
+        cs = math.cos(angle)
+        omcs = 1.0 - cs
+        sn = math.sin(angle)
+        return Mat4([
+            [cs+x*x*omcs, x*y*omcs-z*sn, x*z*omcs+y*sn, 0.0],
+            [y*x*omcs+z*sn, cs+y*y*omcs, y*z*omcs-x*sn, 0.0],
+            [z*x*omcs-y*sn, z*y*omcs+x*sn, cs+z*z*omcs, 0.0],
             [0.0, 0.0, 0.0, 1.0]
         ])
 
