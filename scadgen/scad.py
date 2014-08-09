@@ -153,11 +153,12 @@ class Cube(PrimitiveObject):
         return op
 
 class Cylinder(PrimitiveObject):
-    def __init__(self, h, r=None, r1=None, r2=None, fn=32):
+    def __init__(self, h, r=None, r1=None, r2=None, center=False, fn=32):
         h = _float_arg(h)
         r = _float_arg(r, allow_none=True)
         r1 = _float_arg(r1, allow_none=True)
         r2 = _float_arg(r2, allow_none=True)
+        center = _bool_arg(center)
         fn = _int_arg(fn)
         
         if r is not None:
@@ -170,22 +171,23 @@ class Cylinder(PrimitiveObject):
         self._h = h
         self._r1 = r1
         self._r2 = r2
+        self._center = center
         self._fn = fn
     
     def center(self):
-        return Vec3(0.0, 0.0, self._h/2)
+        return Vec3(0.0, 0.0, 0.0 if self._center else self._h/2)
     
     def bottom_center(self):
-        return Vec3(0.0, 0.0, 0.0)
+        return Vec3(0.0, 0.0, -self._h/2 if self._center else 0.0)
     
     def top_center(self):
-        return Vec3(0.0, 0.0, self._h)
+        return Vec3(0.0, 0.0, self._h/2 if self._center else self._h)
     
     def _openscad_operation(self):
-        return OpenscadOperation('cylinder', [], {'h':self._h, 'r1':self._r1, 'r2':self._r2, '$fn':self._fn})
+        return OpenscadOperation('cylinder', [], {'h':self._h, 'r1':self._r1, 'r2':self._r2, 'center':self._center, '$fn':self._fn})
     
     def _openjscad_operation(self):
-        return OpenjsscadOperation('cylinder', kw_args={'h':self._h, 'r1':self._r1, 'r2':self._r2, 'fn':self._fn})
+        return OpenjsscadOperation('cylinder', kw_args={'h':self._h, 'r1':self._r1, 'r2':self._r2, 'center':self._center, 'fn':self._fn})
 
 class Sphere(PrimitiveObject):
     def __init__(self, r, fn=32):
