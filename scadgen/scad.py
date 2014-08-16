@@ -206,6 +206,23 @@ class Sphere(PrimitiveObject):
     def _openjscad_operation(self):
         return OpenjsscadOperation('sphere', kw_args={'r':self._r, 'fn':self._fn})
 
+class OpenscadModule(PrimitiveObject):
+    def __init__(self, mod_name, args, kwargs, imports):
+        self._mod_name = mod_name
+        self._args = args
+        self._kwargs = kwargs
+        self._imports = imports
+    
+    def _openscad_operation(self):
+        return OpenscadOperation(self._mod_name, self._args, self._kwargs, imports=self._imports)
+
+class Import(PrimitiveObject):
+    def __init__(self, src_file):
+        self._src_file = src_file
+    
+    def _openscad_operation(self):
+        return OpenscadOperation('import', [self._src_file], {})
+
 class Union(ComposedObject):
     def __init__(self, children):
         ComposedObject.__init__(self, children)
@@ -316,20 +333,22 @@ class Transform(ComposedObject):
 
 
 class OpenscadOperation(object):
-    def __init__(self, name, pos_args, kw_args, inputs=None):
+    def __init__(self, name, pos_args, kw_args, inputs=None, imports=None):
         self._name = name
         self._pos_args = pos_args
         self._kw_args = kw_args
         self._inputs = inputs
+        self._imports = [] if imports is None else imports
     
-    def build(self, indent):
+    def build(self, indent, all_imports):
         istr = '    ' * indent
         kw_args_sorted = [(key, self._kw_args[key]) for key in sorted(self._kw_args)]
         args_str = ', '.join(itertools.chain((_val_to_openscad(val) for val in self._pos_args), ('{}={}'.format(key, _val_to_openscad(val)) for (key, val) in kw_args_sorted)))
+        all_imports.extend(self._imports)
         if self._inputs is None:
             return '{}{}({});\n'.format(istr, self._name, args_str)
         else:
-            inputs_str = ''.join(inp.build((indent + 1)) for inp in self._inputs)
+            inputs_str = ''.join(inp.build((indent + 1), all_imports) for inp in self._inputs)
             return '{}{}({}) {{\n{}{}}}\n'.format(istr, self._name, args_str, inputs_str, istr)
 
 class OpenjsscadOperation(object):
@@ -365,7 +384,10 @@ class OpenjsscadOperation(object):
 
 def build_output(obj, fmt):
     if fmt == 'openscad':
-        res = obj._openscad_operation().build(0)
+        all_imports = []
+        body = obj._openscad_operation().build(0, all_imports)
+        import_str = ''.join('use <{}>;\n'.format(imp) for imp in all_imports)
+        res = import_str + '\n' + body
     elif fmt == 'openjscad':
         res = 'function main() {{\n    return (\n{}\n    );\n}}'.format(obj._openjscad_operation().build(2))
     else:
@@ -384,6 +406,8 @@ def _val_to_openscad(val):
         return str(val)
     if type(val) is float:
         return _number_to_openscad(val)
+    if type(val) is str:
+        return '"{}"'.format(val)
     raise TypeError()
 
 def _number_to_openscad(val):
