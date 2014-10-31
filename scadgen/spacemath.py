@@ -3,6 +3,41 @@ import itertools
 import operator
 
 
+class Angle(object):
+    def __init__(self, cos, sin):
+        assert type(cos) is float
+        assert type(sin) is float
+        self._cos = cos
+        self._sin = sin
+    
+    def cos(self):
+        return self._cos
+    
+    def sin(self):
+        return self._sin
+    
+    def __add__(self, other):
+        assert isinstance(other, Angle)
+        return Angle((self.cos() * other.cos()) - (self.sin() * other.sin()), (self.sin() * other.cos()) + (self.cos() * other.sin()))
+    
+    def __neg__(self):
+        return Angle(self.cos(), -self.sin())
+    
+    def __sub__(self, other):
+        return self.__add__(other.__neg__())
+    
+    @staticmethod
+    def from_deg(deg):
+        assert type(deg) is float
+        rad = deg * (math.pi / 180)
+        cos = math.cos(rad)
+        sin = math.sin(rad)
+        return Angle(cos, sin)
+
+Angle.Deg90 = Angle(0.0, 1.0)
+Angle.Deg180 = Angle(-1.0, 0.0)
+
+
 class Vec3(object):
     def __init__(self, x=0.0, y=0.0, z=0.0, v=None):
         if v is not None:
@@ -171,17 +206,18 @@ class Mat4(object):
         ])
     
     @staticmethod
-    def new_rotate(angle_deg, vector):
-        assert type(angle_deg) is float
+    def new_rotate(angle, vector):
+        assert isinstance(angle, Angle) or type(angle) is float
         assert isinstance(vector, Vec3)
         normalized_vector = vector.normalize()
         x = normalized_vector.x
         y = normalized_vector.y
         z = normalized_vector.z
-        angle = angle_deg * (math.pi / 180)
-        cs = math.cos(angle)
+        if not isinstance(angle, Angle):
+            angle = Angle.from_deg(angle)
+        cs = angle.cos()
         omcs = 1.0 - cs
-        sn = math.sin(angle)
+        sn = angle.sin()
         return Mat4([
             [cs+x*x*omcs, x*y*omcs-z*sn, x*z*omcs+y*sn, 0.0],
             [y*x*omcs+z*sn, cs+y*y*omcs, y*z*omcs-x*sn, 0.0],
