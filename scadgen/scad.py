@@ -1,4 +1,5 @@
 import itertools
+import math
 from spacemath import *
 
 
@@ -153,13 +154,14 @@ class Cube(PrimitiveObject):
         return op
 
 class Cylinder(PrimitiveObject):
-    def __init__(self, h, r=None, r1=None, r2=None, center=False, fn=32):
+    def __init__(self, h, r=None, r1=None, r2=None, center=False, fn=32, internal=False):
         h = _float_arg(h)
         r = _float_arg(r, allow_none=True)
         r1 = _float_arg(r1, allow_none=True)
         r2 = _float_arg(r2, allow_none=True)
         center = _bool_arg(center)
         fn = _int_arg(fn)
+        internal = _bool_arg(internal)
         
         if r is not None:
             assert r1 is None and r2 is None, "If 'r' is given then 'r1' and 'r2' must not be given."
@@ -167,6 +169,11 @@ class Cylinder(PrimitiveObject):
             r2 = r
         else:
             assert r1 is not None and r2 is not None, "If either 'r1' or 'r2' is given then both must be."
+        
+        if internal:
+            ratio = math.cos(math.pi / fn)
+            r1 /= ratio
+            r2 /= ratio
         
         self._h = h
         self._r1 = r1
