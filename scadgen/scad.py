@@ -154,7 +154,7 @@ class Cube(PrimitiveObject):
         return op
 
 class Cylinder(PrimitiveObject):
-    def __init__(self, h, r=None, r1=None, r2=None, center=False, fn=32, internal=False):
+    def __init__(self, h, r=None, r1=None, r2=None, center=False, fn=32, internal=False, flat_base=False):
         h = _float_arg(h)
         r = _float_arg(r, allow_none=True)
         r1 = _float_arg(r1, allow_none=True)
@@ -162,6 +162,7 @@ class Cylinder(PrimitiveObject):
         center = _bool_arg(center)
         fn = _int_arg(fn)
         internal = _bool_arg(internal)
+        flat_base = _bool_arg(flat_base)
         
         if r is not None:
             assert r1 is None and r2 is None, "If 'r' is given then 'r1' and 'r2' must not be given."
@@ -180,6 +181,7 @@ class Cylinder(PrimitiveObject):
         self._r2 = r2
         self._center = center
         self._fn = fn
+        self._flat_base = flat_base
     
     def center(self):
         return Vec3(0.0, 0.0, 0.0 if self._center else self._h/2)
@@ -191,10 +193,16 @@ class Cylinder(PrimitiveObject):
         return Vec3(0.0, 0.0, self._h/2 if self._center else self._h)
     
     def _openscad_operation(self):
-        return OpenscadOperation('cylinder', [], {'h':self._h, 'r1':self._r1, 'r2':self._r2, 'center':self._center, '$fn':self._fn})
+        op = OpenscadOperation('cylinder', [], {'h':self._h, 'r1':self._r1, 'r2':self._r2, 'center':self._center, '$fn':self._fn})
+        if self._flat_base:
+            op = OpenscadOperation('rotate', [180.0 / self._fn], {}, [op])
+        return op
     
     def _openjscad_operation(self):
-        return OpenjsscadOperation('cylinder', kw_args={'h':self._h, 'r1':self._r1, 'r2':self._r2, 'center':self._center, 'fn':self._fn})
+        op = OpenjsscadOperation('cylinder', kw_args={'h':self._h, 'r1':self._r1, 'r2':self._r2, 'center':self._center, 'fn':self._fn})
+        if self._flat_base:
+            op = OpenjsscadOperation('rotateZ', pos_args=[180.0 / self._fn], inputs=[op], is_method=True)
+        return op
 
 class Sphere(PrimitiveObject):
     def __init__(self, r, fn=32):
